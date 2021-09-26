@@ -12,8 +12,11 @@ class Ledger:
     def load_pickle(self, path):
         self.ledger = pd.read_pickle(path)
         
-    def write(self, date, coin, amount, value, note):
-        self.df.loc[len(self.df.index)] = [date, coin, amount, value, note]
+    def write(self, time, coin, amount, value, note):
+        self.df.loc[len(self.df.index)] = [time, coin, amount, value, note]
+        
+    def get_amount(self, coin):
+        return sum(self.df[self.df['Coin'].str.contains(coin)]['Amount'])
     
 class Portfolio:
     def __init__(self, coins, amounts, values, ledger):
@@ -43,14 +46,22 @@ class Portfolio:
         self.coins[coin] -= amount
         self.ledger.write(time, coin, -amount, value, note)
         
+    def overwrite_coin_amount(self, coin, amount, value, time=date.today(), note=''):
+        if coin not in self.coins:
+            raise Exception("Coin is not in portfolio.")
+        self.coins[coin] = amount
+        led_amount = self.ledger.get_amount(coin)
+        self.ledger.write(time, coin, amount - led_amount, value, note='overwrite')
+        
     def swap(self, coin1, amount1, value1, coin2, amount2, value2=None, time=date.today()):
         '''
         Swapping amount1 of coin1 for amount2 of coin2.
         '''
         if value2 is None:
             value2 = amount1 * value1 / amount2
-        self.remove_coin(coin1, amount1, value1, time, note='Swap')
-        self.add_coin(coin2, amount2, value2, time, note='Swap')
+        note = 'swap'
+        self.remove_coin(coin1, amount1, value1, time, note)
+        self.add_coin(coin2, amount2, value2, time, note)
     
     def provide_liquidity(self, lp_recieved, coin1, amount1, value1, coin2, amount2, value2=None, time=date.today()):
         if value2 is None:
