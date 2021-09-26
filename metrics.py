@@ -9,14 +9,12 @@ def il(pa0, pa1, pb0, pb1):
     ratio = (pa0 * pb1) / (pa1 * pb0)
     return (2 * np.sqrt(ratio) / (ratio + 1)) - 1
 
-def il_complex(pa0, pa1, pb0, pb1, rate=0, leverage=1):
+def il_leveraged(pa0, pa1, pb0, pb1, rate=0, leverage=1):
     '''
     Compute net profit when using leverage to provide liquidity by computing difference between impermanent loss and APY.
     Rate is the APY which accounts for leverage. The APY is computed against the lower of the initial and final values.
     '''
     ratio = (pa0 * pb1) / (pa1 * pb0)
-    i_l = il(pa0, pa1, pb0, pb1)
-    #print("Impermanent loss: ", i_l, "/n Leveraged Impermanent loss: ", leverage * i_l)
     return leverage * il(pa0, pa1, pb0, pb1) + 2 * rate * min(1, np.sqrt(ratio)) / (ratio + 1)
     
 def lp_stats(pa0, pa1, pb0, pb1, qa0):
