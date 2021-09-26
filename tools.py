@@ -4,7 +4,11 @@ from datetime import datetime
 from pycoingecko import CoinGeckoAPI
 from bisect import bisect_left
 
-def get_coin_data(coin, days, data_resolution=300):
+def get_price(coin):
+    cg = CoinGeckoAPI()
+    return cg.get_price(ids=coin, vs_currencies='usd')[coin]['usd']
+    
+def get_prices(coin, days, data_resolution=300):
     '''
     Pulls pricing data for a given coin from coinbase, evenly spaced from the last x days
     '''
@@ -38,6 +42,13 @@ def transpose(arr):
     Takes an array [[1,1,1,1], [2,2,2,2], [3,3,3,3]] and returns [[1,2,3], [1,2,3], [1,2,3], [1,2,3]]
     '''
     return [[a[i] for a in arr] for i in range(len(arr[0]))]
+    
+def get_lp_token_price(coin1, coin2):
+    '''
+    Placeholder. This is function is pretty hard to implement.
+    '''
+    print('Computing LP token price for ', coin1, ' and ', coin2)
+    return float(input("Total pool value: ")) / float(input("Total number of LP tokens: "))
 
 
 

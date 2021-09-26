@@ -36,7 +36,7 @@ def correlation(coins, days, data_resolution=300):
     values = {}
     correlation = {}   
     for c in coins:
-        values[c] = tools.get_coin_data(c, days, data_resolution)
+        values[c] = tools.get_coin_prices(c, days, data_resolution)
     for c, d in combinations(coins, 2):
         correlation[(c,d)] = np.corrcoef(values[c], values[d])[0,1]
     return correlation
