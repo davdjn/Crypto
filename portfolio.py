@@ -12,7 +12,7 @@ class Ledger:
     def load_pickle(self, path):
         self.ledger = pd.read_pickle(path)
         
-    def write_to_ledger(self, date, coin, amount, value, note):
+    def write(self, date, coin, amount, value, note):
         self.df.loc[len(self.df.index)] = [date, coin, amount, value, note]
     
 class Portfolio:
@@ -28,12 +28,12 @@ class Portfolio:
         for i, c in enumerate(coins):
             self.coins.setdefault(c, 0)
             self.coins[c] += amounts[i]
-            self.ledger.write_to_ledger(time, c, amounts[i], values[i], 'Init')
+            self.ledger.write(time, c, amounts[i], values[i], 'Init')
                        
     def add_coin(self, coin, amount, value, time=date.today(), note=''):
         self.coins.setdefault(coin, 0)
         self.coins[coin] += amount
-        self.ledger.write_to_ledger(time, coin, amount, value, note)
+        self.ledger.write(time, coin, amount, value, note)
     
     def remove_coin(self, coin, amount, value, time=date.today(), note=''):
         if coin not in self.coins:
@@ -41,7 +41,7 @@ class Portfolio:
         if self.coins[coin] < amount:
             raise Exception ("Not enough of the coin in the portfolio.")
         self.coins[coin] -= amount
-        self.ledger.write_to_ledger(time, coin, -amount, value, note)
+        self.ledger.write(time, coin, -amount, value, note)
         
     def swap(self, coin1, amount1, value1, coin2, amount2, value2=None, time=date.today()):
         '''
