@@ -10,11 +10,14 @@ class Portfolio:
         time = tools.get_time()
         self.coins = {}
         self.ledger = pd.DataFrame({'Date':[],'Coin':[],'Amount':[],'Price':[],'Value':[],'Note':[]})
+        temp_history = {}
         for coin, amount, price in input:
             self.coins.setdefault(coin, 0)
             self.coins[coin] += amount
             self.write(time, coin, amount, price, 'init')
-        self.history = [(time, self.get_total(), input)]
+            temp_history[coin] = (amount, price)
+        temp_history['total'] = self.get_total()
+        self.history = {time: temp_history}
     
     def write(self, time, coin, amount, price, note):
         self.ledger.loc[len(self.ledger.index)] = [time, coin, amount, price, amount*price, note]
@@ -82,11 +85,8 @@ class Portfolio:
     def get_summary(self):
         df = pd.DataFrame({ 'Coin':[],'Amount':[],'Price':[],'Value':[]})
         for c in self.coins:
-            # This computation should be generalized in the future. Coin should become a class with a name and a 'get_price' function, which can be assigned at instatiation.
-            # This allows for more abstract capabilities, such as including leveraged yield farming.
             price = coin_tools.get_coin_price(c)
-            value = price * self.coins[c]
-            df.loc[len(df.index)] = [c, self.coins[c], price, value]
+            df.loc[len(df.index)] = [c, self.coins[c], price, self.coins[c] * price]
         df = df.sort_values(by='Value', ascending=False)
         df.loc[len(df.index)] = ['Total', None, None, sum(df['Value'])]
         self.update_history(df)
@@ -96,4 +96,26 @@ class Portfolio:
         if df is None:
             df = self.get_summary()
         df, total = df[:-1], float(df[-1:]['Value'])
-        self.history.append((tools.get_time(), total, df.values.tolist()))
+        history = {}
+        for row in df.itertuples():
+            _, coin, amount, price, _ = row
+            history[coin] = (amount, price)
+        history['total'] = total
+        self.history[tools.get_time()] = history
+        
+    def pivot_history(self):
+        history = self.history
+        data = {'total' : [[], []]}
+
+        for date in history:
+            for coin in self.coins:
+                if coin in history[date]:
+                    data.setdefault(coin, [[],[],[],[]])
+                    amount, price = history[date][coin]
+                    data[coin][0].append(date)
+                    data[coin][1].append(amount)
+                    data[coin][2].append(price)
+                    data[coin][3].append(price * amount)
+            data['total'][0].append(date)
+            data['total'][1].append(history[date]['total'])
+        return data
