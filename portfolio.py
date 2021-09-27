@@ -22,42 +22,52 @@ class Portfolio:
     def write(self, time, coin, amount, price, note):
         self.ledger.loc[len(self.ledger.index)] = [time, coin, amount, price, amount*price, note]
                        
-    def add_coin(self, coin, amount, price=None, time=tools.get_time(), note=''):
+    def add_coin(self, coin, amount, price=None, time=None, note=''):
+        if time is None:
+            time = tools.get_time()
         if price is None:
-            price = coin_tools.get_price(coin)
+            price = coin_tools.get_coin_price(coin)
         self.coins.setdefault(coin, 0)
         self.coins[coin] += amount
         self.write(time, coin, amount, price, note)
     
-    def remove_coin(self, coin, amount, price=None, time=tools.get_time(), note=''):
+    def remove_coin(self, coin, amount, price=None, time=None, note=''):
         if coin not in self.coins:
             raise Exception("Coin is not in portfolio.")
         if self.coins[coin] < amount:
             raise Exception ("Not enough of the coin in the portfolio.")
+        if time is None:
+            time = tools.get_time()
         if price is None:
-            price = coin_tools.get_price(coin)
+            price = coin_tools.get_coin_price(coin)
         self.coins[coin] -= amount
         self.write(time, coin, -amount, price, note)
         
-    def overwrite_coin_amount(self, coin, amount, price=None, time=tools.get_time()):  
+    def overwrite_coin_amount(self, coin, amount, price=None, time=None):  
         if coin not in self.coins:
             raise Exception("Coin is not in portfolio.")
+        if time is None:
+            time = tools.get_time()
         if price is None:
-            price = coin_tools.get_price(coin)
+            price = coin_tools.get_coin_price(coin)
         prev, self.coins[coin] = self.coins[coin], amount
         self.ledger.write(time, coin, amount - prev, price, note='overwrite')
         
-    def swap(self, coin1, amount1, price1, coin2, amount2, price2=None, time=tools.get_time()):
+    def swap(self, coin1, amount1, price1, coin2, amount2, price2=None, time=None):
         '''
         Swapping amount1 of coin1 for amount2 of coin2.
         '''
+        if time is None:
+            time = tools.get_time()
         if price2 is None:
             price2 = amount1 * price1 / amount2
         note = 'swap'
         self.remove_coin(coin1, amount1, price1, time, note)
         self.add_coin(coin2, amount2, price2, time, note)
     
-    def provide_liquidity(self, lp_recieved, coin1, amount1, price1, coin2, amount2, price2=None, time=tools.get_time()):
+    def provide_liquidity(self, lp_recieved, coin1, amount1, price1, coin2, amount2, price2=None, time=None):
+        if time is None:
+            time = tools.get_time()
         if price2 is None:
             price2 = amount1 * price1 / amount2
         if coin1 > coin2:
@@ -68,7 +78,9 @@ class Portfolio:
         self.remove_coin(coin2, amount2, price2, time, note)
         self.add_coin('LP_'+coin1+'_'+coin2, lp_recieved, None, time, note)
         
-    def remove_liquidity(self, lp_returned, coin1, amount1, price1, coin2, amount2, price2=None, time=tools.get_time()):
+    def remove_liquidity(self, lp_returned, coin1, amount1, price1, coin2, amount2, price2=None, time=None):
+        if time is None:
+            time = tools.get_time()
         if price2 is None:
             price2 = amount1 * price1 / amount2
         if coin1 > coin2:
