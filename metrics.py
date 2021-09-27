@@ -1,6 +1,6 @@
 import numpy as np
 from itertools import combinations
-import coin
+import coin_tools
 
 def il(pa0, pa1, pb0, pb1):
     '''
@@ -36,7 +36,7 @@ def correlation(coins, days, data_resolution=300):
     values = {}
     correlation = {}   
     for c in coins:
-        values[c] = coin.get_prices(c, days, data_resolution)
+        values[c] = coin_tools.get_prices(c, days, data_resolution)
     for c, d in combinations(coins, 2):
         correlation[(c,d)] = np.corrcoef(values[c], values[d])[0,1]
     return correlation
