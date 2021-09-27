@@ -34,5 +34,8 @@ def print_df(df, precision=2):
     pd.set_option('precision', precision)
     print(df, '\n')
 
-
+def get_time(time=None):
+    if time is None:
+        time = datetime.now()
+    return f'{time:%y-%m-%d %H:%M}'
 

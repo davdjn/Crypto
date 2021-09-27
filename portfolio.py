@@ -1,68 +1,50 @@
 import pandas as pd
-from datetime import date
-import coin
-
-class Ledger:
-    def __init__(self):
-        self.df = pd.DataFrame({'Date':[],'Coin':[],'Amount':[],'Price':[],'Value':[],'Note':[]})
-        
-    def save_pickle(self, path):
-        self.ledger.to_pickle(path)
-    
-    def load_pickle(self, path):
-        self.ledger = pd.read_pickle(path)
-        
-    def write(self, time, coin, amount, price, note):
-        self.df.loc[len(self.df.index)] = [time, coin, amount, price, amount*price, note]
-        
-    def get_amount(self, coin):
-        return sum(self.df[self.df['Coin'].str.contains(coin)]['Amount'])
+import coin_tools
+import tools
     
 class Portfolio:
-    def __init__(self, ledger, input):
+    def __init__(self, input):
         '''
         input = [[coin1, amount1, price1], [coin2, amount2, price2], ...]
         '''
+        time = tools.get_time()
         self.coins = {}
-        self.ledger = ledger
-        time = date.today()
-        if not self.ledger.df.empty:
-            for row in self.ledger.df.itertuples(index=False,name=None):
-                c = row[1]
-                self.coins.setdefault(c, 0)
-                self.coins[c] += row[2]
+        self.ledger = pd.DataFrame({'Date':[],'Coin':[],'Amount':[],'Price':[],'Value':[],'Note':[]})
         for coin, amount, price in input:
             self.coins.setdefault(coin, 0)
             self.coins[coin] += amount
-            self.ledger.write(time, coin, amount, price, 'init')
+            self.write(time, coin, amount, price, 'init')
+        self.history = [(time, self.get_total(), input)]
+    
+    def write(self, time, coin, amount, price, note):
+        self.ledger.loc[len(self.ledger.index)] = [time, coin, amount, price, amount*price, note]
                        
-    def add_coin(self, coin, amount, price=None, time=date.today(), note=''):
+    def add_coin(self, coin, amount, price=None, time=tools.get_time(), note=''):
         if price is None:
-            price = coin.get_price(coin)
+            price = coin_tools.get_price(coin)
         self.coins.setdefault(coin, 0)
         self.coins[coin] += amount
-        self.ledger.write(time, coin, amount, price, note)
+        self.write(time, coin, amount, price, note)
     
-    def remove_coin(self, coin, amount, price=None, time=date.today(), note=''):
+    def remove_coin(self, coin, amount, price=None, time=tools.get_time(), note=''):
         if coin not in self.coins:
             raise Exception("Coin is not in portfolio.")
         if self.coins[coin] < amount:
             raise Exception ("Not enough of the coin in the portfolio.")
         if price is None:
-            price = coin.get_price(coin)
+            price = coin_tools.get_price(coin)
         self.coins[coin] -= amount
-        self.ledger.write(time, coin, -amount, price, note)
+        self.write(time, coin, -amount, price, note)
         
-    def overwrite_coin_amount(self, coin, amount, price=None, time=date.today()):  
+    def overwrite_coin_amount(self, coin, amount, price=None, time=tools.get_time()):  
         if coin not in self.coins:
             raise Exception("Coin is not in portfolio.")
         if price is None:
-            price = coin.get_price(coin)
-        self.coins[coin] = amount
-        led_amount = self.ledger.get_amount(coin)
-        self.ledger.write(time, coin, amount - led_amount, price, note='overwrite')
+            price = coin_tools.get_price(coin)
+        prev, self.coins[coin] = self.coins[coin], amount
+        self.ledger.write(time, coin, amount - prev, price, note='overwrite')
         
-    def swap(self, coin1, amount1, price1, coin2, amount2, price2=None, time=date.today()):
+    def swap(self, coin1, amount1, price1, coin2, amount2, price2=None, time=tools.get_time()):
         '''
         Swapping amount1 of coin1 for amount2 of coin2.
         '''
@@ -72,7 +54,7 @@ class Portfolio:
         self.remove_coin(coin1, amount1, price1, time, note)
         self.add_coin(coin2, amount2, price2, time, note)
     
-    def provide_liquidity(self, lp_recieved, coin1, amount1, price1, coin2, amount2, price2=None, time=date.today()):
+    def provide_liquidity(self, lp_recieved, coin1, amount1, price1, coin2, amount2, price2=None, time=tools.get_time()):
         if price2 is None:
             price2 = amount1 * price1 / amount2
         if coin1 > coin2:
@@ -83,7 +65,7 @@ class Portfolio:
         self.remove_coin(coin2, amount2, price2, time, note)
         self.add_coin('LP_'+coin1+'_'+coin2, lp_recieved, None, time, note)
         
-    def remove_liquidity(self, lp_returned, coin1, amount1, price1, coin2, amount2, price2=None, time=date.today()):
+    def remove_liquidity(self, lp_returned, coin1, amount1, price1, coin2, amount2, price2=None, time=tools.get_time()):
         if price2 is None:
             price2 = amount1 * price1 / amount2
         if coin1 > coin2:
@@ -94,29 +76,24 @@ class Portfolio:
         self.add_coin(coin1, amount1, price1, time, note)
         self.add_coin(coin2, amount2, price2, time, note)
         
-    def get_value(self):
-        total = 0
-        for c in self.coins:
-            if c.startswith('LP_'):
-                _, coin1, coin2 = c.split('_')
-                total += coin.get_lp_token_price(coin1, coin2) * self.coins[c]
-            else:
-                total += coin.get_price(c) * self.coins[c]
-        return total
+    def get_total(self):
+        return sum([coin_tools.get_coin_price(c) * self.coins[c] for c in self.coins])
         
     def get_summary(self):
         df = pd.DataFrame({ 'Coin':[],'Amount':[],'Price':[],'Value':[]})
-        total = 0
         for c in self.coins:
-            if c.startswith('LP_'):
-                _, coin1, coin2 = c.split('_')
-                price = coin.get_lp_token_price(coin1, coin2)
-                value = price * self.coins[c]
-            else:
-                price = coin.get_price(c)
-                value = price * self.coins[c]
-            total += value
+            # This computation should be generalized in the future. Coin should become a class with a name and a 'get_price' function, which can be assigned at instatiation.
+            # This allows for more abstract capabilities, such as including leveraged yield farming.
+            price = coin_tools.get_coin_price(c)
+            value = price * self.coins[c]
             df.loc[len(df.index)] = [c, self.coins[c], price, value]
         df = df.sort_values(by='Value', ascending=False)
-        df.loc[len(df.index)] = ['Total', None, None, total]
+        df.loc[len(df.index)] = ['Total', None, None, sum(df['Value'])]
+        self.update_history(df)
         return df
+    
+    def update_history(self, df=None):
+        if df is None:
+            df = self.get_summary()
+        df, total = df[:-1], float(df[-1:]['Value'])
+        self.history.append((tools.get_time(), total, df.values.tolist()))
