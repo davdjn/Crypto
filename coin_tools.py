@@ -23,3 +23,9 @@ def get_lp_token_price(coin1, coin2):
     '''
     print('Computing LP token price for ', coin1, ' and ', coin2)
     return float(input("Total pool value: ")) / float(input("Total number of LP tokens: "))
+    
+def get_coin_price(coin):
+    if coin.startswith('LP_'):
+        _, coin1, coin2 = coin.split('_')
+        return get_lp_token_price(coin1, coin2)
+    return get_price(coin)
