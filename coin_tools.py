@@ -21,8 +21,9 @@ def get_lp_token_price(coin1, coin2):
     '''
     Placeholder. This is function is pretty hard to implement.
     '''
-    print('Computing LP token price for ', coin1, ' and ', coin2)
-    return float(input("Total pool value: ")) / float(input("Total number of LP tokens: "))
+    price = float(input("Total pool value / total number of LP tokens: "))
+    print('LP token price for', coin1, 'and', coin2, ':', price)
+    return price
     
 def get_coin_price(coin):
     if coin.startswith('LP_'):
