@@ -1,1 +1,1 @@
-This is a set of tools for analyzing cryptocurrencies.
+This is a set of tools for tracking and analyzing a cryptocurrency portfolio.
