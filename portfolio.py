@@ -4,17 +4,17 @@ import coin_tools
 import tools
 
 class Portfolio:
-    def __init__(self, ledger=None, history=None):              
+    def __init__(self):              
         self.coins = {}
         self.history = {}
         self.ledger = pd.DataFrame({'Date':[],'Coin':[],'Amount':[],'Price':[],'Value':[],'Note':[]})
     
-    def save(self, ledger_path='ledger.pickle', history_path='history.pickle'):
+    def save(self, ledger_path='pickles/ledger.pickle', history_path='pickles/history.pickle'):
         self.ledger.to_pickle(ledger_path)
         with open(history_path, 'wb') as f:
             pickle.dump(self.history, f)
             
-    def load(self, ledger_path='ledger.pickle', history_path='history.pickle'):
+    def load(self, ledger_path='pickles/ledger.pickle', history_path='pickles/history.pickle'):
         self.ledger = pd.read_pickle(ledger_path)
         with open(history_path, 'rb') as f:
             self.history = pickle.load(f)
@@ -22,7 +22,6 @@ class Portfolio:
             c = row[1]
             self.coins.setdefault(c, 0)
             self.coins[c] += row[2]
-        self.update_history()
     
     def write(self, time, coin, amount, price, note):
         self.ledger.loc[len(self.ledger.index)] = [time, coin, amount, price, amount*price, note]
@@ -96,23 +95,25 @@ class Portfolio:
         self.add_coin(coin1, amount1, price1, time, note)
         self.add_coin(coin2, amount2, price2, time, note)
         
-    def get_total(self):
-        return sum([coin_tools.get_coin_price(c) * self.coins[c] for c in self.coins])
-        
-    def get_summary(self, update=True):
+    def get_summary(self, update=False):
         df = pd.DataFrame({ 'Coin':[],'Amount':[],'Price':[],'Value':[]})
+        last = list(self.history.keys())[-1]
         for c in self.coins:
-            price = coin_tools.get_coin_price(c)
+            if update:
+                price = coin_tools.get_coin_price(c)
+            else:
+                price = self.history[last][c][1]
             df.loc[len(df.index)] = [c, self.coins[c], price, self.coins[c] * price]
-        df = df.sort_values(by='Value', ascending=False)
-        df.loc[len(df.index)] = ['Total', None, None, sum(df['Value'])]
+        df.sort_values(by='Value', ascending=False, inplace=True)
+        df.reset_index(drop=True, inplace=True)
+        df.loc[len(df.index)] = ['Total', None, None, sum(df['Value'])]  
         if update:
             self.update_history(df)
         return df
     
     def update_history(self, df=None):
         '''
-        One can update this history without creating the dataframe, but this allows reducing the number of get_coin_price calls.
+        One can update history without creating the summary dataframe, but this allows reducing the number of get_coin_price calls.
         '''
         if df is None:
             df = self.get_summary()
@@ -126,7 +127,7 @@ class Portfolio:
         
     def pivot_history(self):
         '''
-        Change formatting for easy plotting.
+        Change history formatting for easy plotting.
         '''
         history = self.history
         data = {'total' : [[], []]}
