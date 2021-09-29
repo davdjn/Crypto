@@ -39,12 +39,14 @@ class Portfolio:
         if coin not in self.coins:
             raise Exception("Coin is not in portfolio.")
         if self.coins[coin] < amount:
-            raise Exception ("Not enough of the coin in the portfolio.")
+            choice = input('Warning: Not enough ' + coin + ' in your portfolio. Input (n) to terminate.')
+            if choice == 'n':
+                raise Exception ("Not enough " + coin + " in your portfolio.")
         if time is None:
             time = tools.get_time()
         if price is None:
             price = coin_tools.get_coin_price(coin)
-        self.coins[coin] -= amount
+        self.coins[coin] -= min(self.coins[coin], amount)
         self.write(time, coin, -amount, price, note)
         
     def overwrite_coin_amount(self, coin, amount, price=None, time=None):  
@@ -57,21 +59,25 @@ class Portfolio:
         prev, self.coins[coin] = self.coins[coin], amount
         self.ledger.write(time, coin, amount - prev, price, note='overwrite')
         
-    def swap(self, coin1, amount1, price1, coin2, amount2, price2=None, time=None):
+    def swap(self, coin1, coin2, amount1, amount2, price1=None, price2=None, time=None):
         '''
         Swapping amount1 of coin1 for amount2 of coin2.
         '''
         if time is None:
             time = tools.get_time()
+        if price1 is None:
+            price1 = coin_tools.get_coin_price(coin1)
         if price2 is None:
             price2 = amount1 * price1 / amount2
         note = 'swap'
         self.remove_coin(coin1, amount1, price1, time, note)
         self.add_coin(coin2, amount2, price2, time, note)
     
-    def provide_liquidity(self, lp_recieved, coin1, amount1, price1, coin2, amount2, price2=None, time=None):
+    def add_liquidity(self, lp_recieved, coin1, coin2, amount1, amount2, price1=None, price2=None, time=None):
         if time is None:
             time = tools.get_time()
+        if price1 is None:
+            price1 = coin_tools.get_coin_price(coin1)
         if price2 is None:
             price2 = amount1 * price1 / amount2
         if coin1 > coin2:
@@ -82,9 +88,11 @@ class Portfolio:
         self.remove_coin(coin2, amount2, price2, time, note)
         self.add_coin('LP_'+coin1+'_'+coin2, lp_recieved, None, time, note)
         
-    def remove_liquidity(self, lp_returned, coin1, amount1, price1, coin2, amount2, price2=None, time=None):
+    def remove_liquidity(self, lp_returned, coin1, coin2, amount1, amount2, price1=None, price2=None, time=None):
         if time is None:
             time = tools.get_time()
+        if price1 is None:
+            price1 = coin_tools.get_coin_price(coin1)
         if price2 is None:
             price2 = amount1 * price1 / amount2
         if coin1 > coin2:
@@ -93,35 +101,38 @@ class Portfolio:
         note = 'remove LP'
         self.remove_coin('LP_'+coin1+'_'+coin2, lp_returned, None, time, note)
         self.add_coin(coin1, amount1, price1, time, note)
-        self.add_coin(coin2, amount2, price2, time, note)
+        self.add_coin(coin2, amount2, price2, time, note)          
         
     def get_summary(self, update=False):
-        df = pd.DataFrame({ 'Coin':[],'Amount':[],'Price':[],'Value':[]})
+        df = pd.DataFrame({'Coin':[],'Amount':[],'Price':[],'Value':[]})
+        if update or not self.history:
+            self.update_history()          
         last = list(self.history.keys())[-1]
         for c in self.coins:
-            if update:
-                price = coin_tools.get_coin_price(c)
-            else:
-                price = self.history[last][c][1]
+            if not c in self.history[last]:
+                self.update_history()
+                last = list(self.history.keys())[-1]
+            price = self.history[last][c][1]
             df.loc[len(df.index)] = [c, self.coins[c], price, self.coins[c] * price]
         df.sort_values(by='Value', ascending=False, inplace=True)
         df.reset_index(drop=True, inplace=True)
         df.loc[len(df.index)] = ['Total', None, None, sum(df['Value'])]  
-        if update:
-            self.update_history(df)
         return df
+        
+    def clear_dust(self, threshold=.001):
+        coins = list(self.coins.keys())
+        for c in coins:
+            if self.coins[c] < threshold:
+                self.coins.pop(c)
     
-    def update_history(self, df=None):
-        '''
-        One can update history without creating the summary dataframe, but this allows reducing the number of get_coin_price calls.
-        '''
-        if df is None:
-            df = self.get_summary()
-        df, total = df[:-1], float(df[-1:]['Value'])
+    def update_history(self):
         history = {}
-        for row in df.itertuples():
-            _, coin, amount, price, _ = row
-            history[coin] = (amount, price)
+        total = 0
+        for c in self.coins:
+            amount = self.coins[c]
+            price = coin_tools.get_coin_price(c)
+            history[c] = (amount, price)
+            total += amount * price
         history['total'] = total
         self.history[tools.get_time()] = history
         

@@ -17,16 +17,15 @@ def get_prices(coin, days, data_resolution=300):
     times = [t / 1000 for t in times]
     return tools.time_spacing(prices, times, tools.get_even_times(days, data_resolution)[0])
     
-def get_lp_token_price(coin1, coin2):
+def get_lp_token_price(coin):
     '''
     Placeholder. This is function is pretty hard to implement.
     '''
-    price = float(input("Total pool value / total number of LP tokens: "))
-    print('LP token price for', coin1, 'and', coin2, ':', price)
+    price = float(input("Price of " + coin + ": "))
+    print('LP token price for', coin + ':', price)
     return price
     
 def get_coin_price(coin):
     if coin.startswith('LP_'):
-        _, coin1, coin2 = coin.split('_')
-        return get_lp_token_price(coin1, coin2)
+        return get_lp_token_price(coin)
     return get_price(coin)
