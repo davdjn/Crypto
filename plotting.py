@@ -19,9 +19,9 @@ def plot_portfolio(portfolio, metric):
     sorted_coins = sorted(portfolio.coins, key=lambda c: data[c][key[metric]][-1], reverse=True)
     
     fig = go.Figure()
-    fig.update_layout(title=metric, template="plotly_dark")
+    fig.update_layout(title=metric, template="plotly_dark", width=1000)
     if metric == 'value':
         fig.add_trace(go.Scatter(x=data['total'][0], y=data['total'][1], name='total'))
     for c in sorted_coins:
-        fig.add_trace(go.Scatter(x=data[c][0], y=data[c][key[metric]], name=c))
+        fig.add_trace(go.Scatter(x=data[c][0], y=data[c][key[metric]], name=c.name+'_'+c.type))
     fig.show()
