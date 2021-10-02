@@ -31,7 +31,7 @@ def transpose(arr):
     return [[a[i] for a in arr] for i in range(len(arr[0]))]
     
 def print_df(df):
-    print(df.tail(15).to_string(float_format=lambda x: "{:.2f}".format(x)), '\n')
+    print(df.tail(12).to_string(float_format=lambda x: "{:.2f}".format(x)), '\n')
 
 def get_time(time=None):
     if time is None:
