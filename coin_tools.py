@@ -1,6 +1,30 @@
 from pycoingecko import CoinGeckoAPI
 import tools
 
+class Coin:
+    def __init__(self, name, coin_type='token'):
+        self.name = name
+        self.type = coin_type
+        
+    def get_price(self):
+        if self.type == 'lp':
+            return get_lp_token_price(self.name)
+        if self.type == 'debt':
+            return -get_price(self.name)
+        return get_price(self.name)
+        
+    def __hash__(self):
+        return hash((self.name, self.type))
+
+    def __eq__(self, other):
+        return (self.name, self.type) == (other.name, other.type)
+
+    def __ne__(self, other):
+        return not(self == other)
+        
+    def __str__(self):
+        return self.name   
+
 def get_price(coin):
     '''
     Pulls pricing data for a given coin from coinbase.
@@ -25,7 +49,4 @@ def get_lp_token_price(coin):
     print('LP token price for', coin + ':', price)
     return price
     
-def get_coin_price(coin):
-    if coin.startswith('LP_'):
-        return get_lp_token_price(coin)
-    return get_price(coin)
+    
